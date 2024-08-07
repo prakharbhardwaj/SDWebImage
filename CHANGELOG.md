@@ -1,3 +1,32 @@
+## [5.19.6 - Thumbnail performance, on Sep 7th, 2024](https://github.com/rs/SDWebImage/releases/tag/5.19.6)
+See [all tickets marked for the 5.19.5 release](https://github.com/SDWebImage/SDWebImage/milestone/138)
+
+### Performance
+- Use the better way to detect lazy/non-lazy CGImage. Only do force decoding for lazy image (avoid thumbnail image been decoded twice) #3736
+
+### Fixes
+- Remove the unused code for iOS 10 polyfill #3735
+
+## [5.19.5 - Swift 6 Compatible, on Jul 24th, 2024](https://github.com/rs/SDWebImage/releases/tag/5.19.5)
+See [all tickets marked for the 5.19.5 release](https://github.com/SDWebImage/SDWebImage/milestone/137)
+
+### Fixes
+- Fix our HEIC coder to encode timed image sequences instead of non-timed image gallery for HEIC encoding #3727
+- - If you have use case to encode static multi-frame HEIC image, use ImageIO directly. SDWebImage currenly always assume multi-frame image to be animated.
+
+### Project
+- Use the new macro from Swift compiler and SDK to mark the UIImage/UIImageView subclass matching what they designed to be #3731
+- - This solve the Xcode 16 Beta issue when trun on Swift 6 mode with strict concurrency.
+
+### Tests
+- Try to re-enable the HEIC encoding test and visionOS xctest #3728
+
+## [5.19.4 - 5.19 Patch, on Jul 1st, 2024](https://github.com/rs/SDWebImage/releases/tag/5.19.4)
+See [all tickets marked for the 5.19.4 release](https://github.com/SDWebImage/SDWebImage/milestone/136)
+
+### Fixes
+- Fix the issue that SDAnimatedImage breaks the vector on macOS #3724
+
 ## [5.19.3 - 5.19 Patch, on May 30th, 2024](https://github.com/rs/SDWebImage/releases/tag/5.19.3)
 See [all tickets marked for the 5.19.3 release](https://github.com/SDWebImage/SDWebImage/milestone/135)
 

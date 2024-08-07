@@ -206,7 +206,11 @@
 - (void)test13ThatHEICWorks {
     if (@available(iOS 11, tvOS 11, macOS 10.13, *)) {
         NSURL *heicURL = [[NSBundle bundleForClass:[self class]] URLForResource:@"TestImage" withExtension:@"heic"];
+#if SD_MAC
         BOOL supportsEncoding = !SDTestCase.isCI; // GitHub Action Mac env currently does not support HEIC encoding
+#else
+        BOOL supportsEncoding = YES; // GitHub Action Mac env with simulator, supported from 20240707.1
+#endif
         [self verifyCoder:[SDImageIOCoder sharedCoder]
         withLocalImageURL:heicURL
          supportsEncoding:supportsEncoding
@@ -236,8 +240,9 @@
 
 - (void)test16ThatHEICAnimatedWorks {
     if (@available(iOS 13, tvOS 13, macOS 10.15, *)) {
-        NSURL *heicURL = [[NSBundle bundleForClass:[self class]] URLForResource:@"TestImageAnimated" withExtension:@"heic"];
-        BOOL supportsEncoding = !SDTestCase.isCI; // GitHub Action Mac env currently does not support HEIC encoding
+        NSURL *heicURL = [[NSBundle bundleForClass:[self class]] URLForResource:@"TestImageAnimated" withExtension:@"heics"];
+        BOOL supportsEncoding = !SDTestCase.isCI; // GitHub Action Mac env currently does not support HEICS animated encoding (but HEIC supported, I don't know why)
+        // See: #3227
         BOOL isAnimatedImage = YES;
         [self verifyCoder:[SDImageHEICCoder sharedCoder]
         withLocalImageURL:heicURL
@@ -297,7 +302,11 @@
 }
 
 - (void)test21ThatEmbedThumbnailHEICWorks {
+#if SD_MAC
     BOOL supportsEncoding = !SDTestCase.isCI; // GitHub Action Mac env currently does not support HEIC encoding
+#else
+    BOOL supportsEncoding = YES; // GitHub Action Mac env with simulator, supported from 20240707.1
+#endif
     if (!supportsEncoding) {
         return;
     }
@@ -344,6 +353,10 @@
     CGSize imageSize = image.size;
     expect(imageSize.width).equal(400);
     expect(imageSize.height).equal(263);
+    // `CGImageSourceCreateThumbnailAtIndex` should always produce non-lazy CGImage
+    CGImageRef cgImage = image.CGImage;
+    expect([SDImageCoderHelper CGImageIsLazy:cgImage]).beFalsy();
+    expect(image.sd_isDecoded).beTruthy();
 }
 
 - (void)test23ThatThumbnailEncodeCalculation {
@@ -351,6 +364,10 @@
     NSData *testImageData = [NSData dataWithContentsOfFile:testImagePath];
     UIImage *image = [SDImageIOCoder.sharedCoder decodedImageWithData:testImageData options:nil];
     expect(image.size).equal(CGSizeMake(5250, 3450));
+    // `CGImageSourceCreateImageAtIndex` should always produce lazy CGImage
+    CGImageRef cgImage = image.CGImage;
+    expect([SDImageCoderHelper CGImageIsLazy:cgImage]).beTruthy();
+    expect(image.sd_isDecoded).beFalsy();
     CGSize thumbnailSize = CGSizeMake(4000, 4000); // 3450 < 4000 < 5250
     NSData *encodedData = [SDImageIOCoder.sharedCoder encodedDataWithImage:image format:SDImageFormatJPEG options:@{
             SDImageCoderEncodeMaxPixelSize: @(thumbnailSize)
@@ -573,6 +590,23 @@
     expect(g1).beCloseToWithin(0.60, 0.01);
     expect(b1).beCloseToWithin(0.33, 0.01);
     expect(a1).beCloseToWithin(0.33, 0.01);
+}
+
+- (void)test31ThatSVGShouldUseNativeImageClass {
+    NSURL *url = [[NSBundle bundleForClass:[self class]] URLForResource:@"TestImage" withExtension:@"svg"];
+    NSData *data = [NSData dataWithContentsOfURL:url];
+    SDAnimatedImage *animatedImage = [SDAnimatedImage imageWithData:data];
+    expect(animatedImage).beNil();
+    UIImage *image = [UIImage sd_imageWithData:data];
+    Class SVGCoderClass = NSClassFromString(@"SDImageSVGCoder");
+    if (SVGCoderClass && [SVGCoderClass sharedCoder]) {
+        expect(image).notTo.beNil();
+        // Vector version
+        expect(image.sd_isVector).beTruthy();
+    } else {
+        // Platform does not support SVG
+        expect(image).beNil();
+    }
 }
 
 #pragma mark - Utils
